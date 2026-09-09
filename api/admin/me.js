@@ -1,0 +1,1 @@
+const {verify}=require("../_lib");module.exports=async(req,res)=>{const m=(req.headers.cookie||"").match(/(?:^|;\s*)vb_admin=([^;]+)/);const p=m&&verify(m[1]);res.json({authenticated:!!p,user:p?.u||null})};
