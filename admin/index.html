@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VeBlyss Admin</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#f4f1e8;color:#183f3d}
+header{background:#123f3c;color:#fff;padding:18px 28px;display:flex;justify-content:space-between;align-items:center}
+.brand{font-size:22px;font-weight:700}.wrap{max-width:1100px;margin:30px auto;padding:0 18px}
+.card{background:#fff;border-radius:12px;padding:24px;box-shadow:0 4px 20px #0001;margin-bottom:20px}
+h1,h2{margin-top:0}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px}
+input,textarea,select{width:100%;padding:11px;border:1px solid #ccd5d2;border-radius:7px;margin:6px 0 14px;font:inherit}
+button{border:0;border-radius:7px;padding:10px 15px;background:#184f4a;color:#fff;cursor:pointer;margin-right:6px}
+button.secondary{background:#e6ece9;color:#183f3d}button.danger{background:#9b3434}
+table{width:100%;border-collapse:collapse}th,td{padding:11px;border-bottom:1px solid #e5e8e7;text-align:left;vertical-align:top}
+.badge{display:inline-block;padding:4px 8px;border-radius:99px;background:#e6f0ed;font-size:12px}.muted{color:#667572}
+.hidden{display:none}.error{color:#a22b2b;margin:8px 0}.success{color:#206c4e;margin:8px 0}
+.actions{white-space:nowrap}.topline{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
+@media(max-width:700px){table{font-size:13px}.actions{white-space:normal}}
+</style>
+</head>
+<body>
+<header><div class="brand">VeBlyss Global — Admin</div><button id="logout" class="secondary">Logout</button></header>
+<div class="wrap">
+<section id="loginCard" class="card" style="max-width:430px;margin:60px auto">
+<h1>Admin Login</h1><p class="muted">Private administration area</p>
+<label>Admin ID</label><input id="user" autocomplete="username">
+<label>Password</label><input id="pass" type="password" autocomplete="current-password">
+<div id="loginMsg" class="error"></div><button id="loginBtn">Login</button>
+</section>
+
+<section id="app" class="hidden">
+<div class="card">
+<div class="topline"><div><h1>Product Management</h1><p class="muted">Manage the VeBlyss product catalogue stored in Neon.</p></div>
+<button id="newBtn">+ Add Product</button></div>
+<div id="msg"></div>
+<div style="overflow:auto"><table><thead><tr><th>Product</th><th>Category</th><th>MRP</th><th>Status</th><th>Actions</th></tr></thead>
+<tbody id="rows"></tbody></table></div>
+</div>
+
+<section id="editor" class="card hidden">
+<h2 id="editorTitle">Add Product</h2>
+<div class="grid">
+<div><label>Name</label><input id="name"></div>
+<div><label>Slug</label><input id="slug" placeholder="e.g. amrit-ghee"></div>
+<div><label>Category</label><input id="category"></div>
+<div><label>MRP (INR, inclusive GST)</label><input id="mrp" type="number" min="0" step="1"></div>
+<div><label>Image URL</label><input id="image_url" placeholder="https://..."></div>
+<div><label>Published</label><select id="published"><option value="true">Published</option><option value="false">Hidden</option></select></div>
+</div>
+<label>Short Description</label><textarea id="short_description" rows="2"></textarea>
+<label>Full Description</label><textarea id="description" rows="5"></textarea>
+<label>Features (one per line)</label><textarea id="features" rows="4"></textarea>
+<label>Specifications (one per line, use Key: Value)</label><textarea id="specifications" rows="4"></textarea>
+<div><button id="saveBtn">Save Product</button><button id="cancelBtn" class="secondary">Cancel</button></div>
+</section>
+</section>
+</div>
+<script>
+let products=[], editingId=null;
+const $=id=>document.getElementById(id);
+function show(id,on=true){$(id).classList.toggle('hidden',!on)}
+function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+async function api(url,opt={}){const r=await fetch(url,{...opt,headers:{'Content-Type':'application/json',...(opt.headers||{})}});let d={};try{d=await r.json()}catch{};if(!r.ok)throw new Error(d.error||'Request failed');return d}
+async function check(){
+ try{await api('/api/admin/me');show('loginCard',false);show('app',true);await load()}
+ catch{show('loginCard',true);show('app',false)}
+}
+async function load(){
+ const d=await api('/api/admin/products');products=d.products||[];
+ $('rows').innerHTML=products.map(p=>`<tr><td><strong>${esc(p.name)}</strong><br><span class="muted">${esc(p.slug)}</span></td>
+<td>${esc(p.category)}</td><td>₹${Number(p.mrp||0).toLocaleString('en-IN')}</td>
+<td><span class="badge">${p.published?'Published':'Hidden'}</span></td>
+<td class="actions"><button onclick="editProduct('${p.id}')">Edit</button>
+<button class="danger" onclick="deleteProduct('${p.id}')">Delete</button></td></tr>`).join('')||'<tr><td colspan="5">No products yet.</td></tr>';
+}
+window.editProduct=id=>{const p=products.find(x=>x.id===id);if(!p)return;editingId=id;$('editorTitle').textContent='Edit Product';['name','slug','category','mrp','image_url','short_description','description'].forEach(k=>$(k).value=p[k]??'');$('published').value=String(!!p.published);$('features').value=(p.features||[]).join('\n');$('specifications').value=Object.entries(p.specifications||{}).map(([k,v])=>`${k}: ${v}`).join('\n');show('editor',true);scrollTo({top:document.body.scrollHeight,behavior:'smooth'})}
+window.deleteProduct=async id=>{if(!confirm('Delete this product?'))return;try{await api('/api/admin/product',{method:'DELETE',body:JSON.stringify({id})});await load();$('msg').className='success';$('msg').textContent='Product deleted.'}catch(e){$('msg').className='error';$('msg').textContent=e.message}}
+$('newBtn').onclick=()=>{editingId=null;$('editorTitle').textContent='Add Product';['name','slug','category','mrp','image_url','short_description','description','features','specifications'].forEach(k=>$(k).value='');$('published').value='true';show('editor',true);scrollTo({top:document.body.scrollHeight,behavior:'smooth'})}
+$('cancelBtn').onclick=()=>show('editor',false)
+$('saveBtn').onclick=async()=>{
+ const specs={};$('specifications').value.split('\n').map(x=>x.trim()).filter(Boolean).forEach(x=>{const i=x.indexOf(':');if(i>0)specs[x.slice(0,i).trim()]=x.slice(i+1).trim()});
+ const body={id:editingId,name:$('name').value.trim(),slug:$('slug').value.trim(),category:$('category').value.trim(),mrp:Number($('mrp').value),image_url:$('image_url').value.trim(),published:$('published').value==='true',short_description:$('short_description').value.trim(),description:$('description').value.trim(),features:$('features').value.split('\n').map(x=>x.trim()).filter(Boolean),specifications:specs};
+ try{await api('/api/admin/product',{method:'POST',body:JSON.stringify(body)});show('editor',false);$('msg').className='success';$('msg').textContent='Product saved.';await load()}catch(e){$('msg').className='error';$('msg').textContent=e.message}
+}
+$('loginBtn').onclick=async()=>{try{await api('/api/admin/login',{method:'POST',body:JSON.stringify({username:$('user').value,password:$('pass').value})});$('loginMsg').textContent='';await check()}catch(e){$('loginMsg').textContent=e.message}}
+$('logout').onclick=async()=>{await api('/api/admin/logout',{method:'POST'});location.reload()}
+check();
+</script>
+</body></html>
