@@ -1,2 +1,0 @@
-import { db, ensureSchema, seedProducts } from '../_db.js';
-export default async function handler(req,res){try{const sql=db();await ensureSchema(sql);await seedProducts(sql);const rows=await sql`SELECT id,name,category,price::float AS price,image,short_description,description,features,specifications FROM products WHERE published=true ORDER BY created_at DESC`;res.setHeader('Access-Control-Allow-Origin','*');res.setHeader('Cache-Control','s-maxage=60, stale-while-revalidate=300');res.json(rows);}catch(e){res.statusCode=500;res.json({error:e.message});}}
