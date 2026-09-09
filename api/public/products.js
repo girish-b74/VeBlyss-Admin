@@ -1,1 +1,0 @@
-const {init,sql}=require("../_lib");module.exports=async(req,res)=>{try{await init();res.setHeader("Cache-Control","s-maxage=60, stale-while-revalidate=300");res.json(await sql`SELECT * FROM products WHERE published=true ORDER BY created_at DESC`)}catch(e){res.status(500).json({error:e.message})}};

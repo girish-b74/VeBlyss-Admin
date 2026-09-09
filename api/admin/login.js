@@ -1,2 +1,0 @@
-const {init,ADMIN_USER,ADMIN_PASSWORD,sign,cookie,body}=require("../_lib");
-module.exports=async(req,res)=>{try{await init();if(req.method!=="POST")return res.status(405).json({error:"Method not allowed"});const b=await body(req);if(b.username!==ADMIN_USER||b.password!==ADMIN_PASSWORD)return res.status(401).json({error:"Invalid credentials"});res.setHeader("Set-Cookie",cookie("vb_admin",sign({u:ADMIN_USER,exp:Date.now()+8*60*60*1000}),8*60*60));res.json({ok:true});}catch(e){res.status(500).json({error:e.message})}};
