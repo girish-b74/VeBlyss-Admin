@@ -1,1 +1,0 @@
-{"version":2,"functions":{"api/**/*.js":{"runtime":"nodejs20.x"}},"rewrites":[{"source":"/admin","destination":"/admin/index.html"},{"source":"/api/:path*","destination":"/api/:path*"}]}
