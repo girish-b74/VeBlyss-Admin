@@ -1,1 +1,0 @@
-const {cookie}=require("../_lib");module.exports=async(req,res)=>{res.setHeader("Set-Cookie",cookie("vb_admin","",0));res.json({ok:true})};
